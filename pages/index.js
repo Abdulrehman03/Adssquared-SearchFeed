@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-
+import { parseStringPromise } from "xml2js"; // Import xml2js
 export default function Home() {
   const [query, setQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [nextArgs, setNextArgs] = useState(null); // To store the NextArgs
-
+  // await parseStringPromise(xmlData, { mergeAttrs: true });
   const handleSearch = async () => {
     setLoading(true);
     setSearched(true);
@@ -24,10 +24,18 @@ export default function Home() {
           },
         }
       );
-      const data = await response.json();
-      setAds(extractListings(data));
-      if (data.Results?.NextArgs?.length > 0) {
-        setNextArgs(data.Results.NextArgs[0]); // Set NextArgs if it exists
+
+      // Get the XML response as text
+      const xmlData = await response.text();
+      // Convert XML to JSON using parseStringPromise
+      const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
+
+      // Extract listings from the JSON data
+      setAds(extractListings(jsonData));
+
+      // Check if NextArgs exists and set it
+      if (jsonData.Results?.NextArgs?.[0]) {
+        setNextArgs(jsonData.Results.NextArgs[0]); // Set NextArgs if it exists
       }
     } catch (error) {
       console.error("Error fetching ads:", error);
@@ -48,10 +56,16 @@ export default function Home() {
           "Content-Type": "application/json",
         },
       });
-      const data = await response.json();
-      setAds((prevAds) => [...prevAds, ...extractListings(data)]); // Append new results
-      if (data.Results?.NextArgs?.length > 0) {
-        setNextArgs(data.Results.NextArgs[0]); // Update NextArgs or set to null if none
+
+      // Get the XML response as text
+      const xmlData = await response.text();
+      // Convert XML to JSON using parseStringPromise
+      const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
+      // Append the new listings to the previous ones
+      setAds((prevAds) => [...prevAds, ...extractListings(jsonData)]);
+      // Update NextArgs or set to null if none
+      if (jsonData.Results?.NextArgs?.[0]) {
+        setNextArgs(jsonData.Results.NextArgs[0]);
       } else {
         setNextArgs(null); // Clear NextArgs if no further results
       }
@@ -93,10 +107,11 @@ export default function Home() {
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
-            className={`px-4 py-2 text-white rounded-lg primaryButton ${query.trim() === "" || loading
+            className={`px-4 py-2 text-white rounded-lg primaryButton ${
+              query.trim() === "" || loading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600"
-              }`}
+            }`}
             onClick={handleSearch}
             disabled={query.trim() === "" || loading}
           >
@@ -127,12 +142,11 @@ export default function Home() {
                   href={`https://${ad?.siteHost?.[0] || "#"}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ background: '#004aad' }}
+                  style={{ background: "#004aad" }}
                   className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
                   Learn More
                 </a>
-
               </div>
             ))
           ) : !loading && !searched ? (
@@ -165,7 +179,6 @@ export default function Home() {
               onClick={fetchNextResults}
               disabled={loading}
             >
-
               {loading ? "Loading..." : "Load More"}
             </button>
           </div>
