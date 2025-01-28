@@ -15,7 +15,7 @@ export default function Home() {
     try {
       const encodedString = encodeURIComponent(query);
       const response = await fetch(
-        `/api/proxy?Keywords=${encodedString}&mkt=us&enableFavicon=1&enableImageInAds=1&siteLink=1&type=bl02fns`,
+        `/api/proxy?Keywords=${encodedString}&mkt=us&siteLink=1&type=bl02fns`,
         {
           method: "POST",
           body: JSON.stringify({ keyword: query }),
