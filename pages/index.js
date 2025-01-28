@@ -15,7 +15,7 @@ export default function Home() {
     try {
       const encodedString = encodeURIComponent(query);
       const response = await fetch(
-       `/api/proxy?Keywords=${encodedString}&mkt=us&enableFavicon=1&enableImageInAds=1&siteLink=1`,
+        `/api/proxy?Keywords=${encodedString}&mkt=us&enableFavicon=1&enableImageInAds=1&siteLink=1&type=bl02fns`,
         {
           method: "POST",
           body: JSON.stringify({ keyword: query }),
@@ -35,7 +35,7 @@ export default function Home() {
       setLoading(false);
     }
   };
-console.log(ads);
+  console.log(ads);
 
   const fetchNextResults = async () => {
     if (!nextArgs) return;
@@ -93,11 +93,10 @@ console.log(ads);
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
-            className={`px-4 py-2 text-white rounded-lg primaryButton ${
-              query.trim() === "" || loading
+            className={`px-4 py-2 text-white rounded-lg primaryButton ${query.trim() === "" || loading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600"
-            }`}
+              }`}
             onClick={handleSearch}
             disabled={query.trim() === "" || loading}
           >
@@ -125,14 +124,14 @@ console.log(ads);
                   {ad?.siteHost?.[0] || "-- --"}
                 </p>
                 <a
-  href={`https://${ad?.siteHost?.[0] || "#"}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  style={{ background: '#004aad' }}
-  className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
->
-  Learn More
-</a>
+                  href={`https://${ad?.siteHost?.[0] || "#"}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ background: '#004aad' }}
+                  className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Learn More
+                </a>
 
               </div>
             ))
@@ -166,7 +165,7 @@ console.log(ads);
               onClick={fetchNextResults}
               disabled={loading}
             >
-              
+
               {loading ? "Loading..." : "Load More"}
             </button>
           </div>
