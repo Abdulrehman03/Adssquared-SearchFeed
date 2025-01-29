@@ -1,41 +1,61 @@
-import React, { useState } from "react";
-import { parseStringPromise } from "xml2js"; // Import xml2js
+import React, { useState, useEffect } from "react";
+import { parseStringPromise } from "xml2js";
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [nextArgs, setNextArgs] = useState(null); // To store the NextArgs
-  // await parseStringPromise(xmlData, { mergeAttrs: true });
+  const [nextArgs, setNextArgs] = useState(null);
+
+  // Function to extract query parameters from URL
+  const getUrlParams = () => {
+    const params = new URLSearchParams(window.location.search);
+    const paramsObj = {};
+    params.forEach((value, key) => {
+      paramsObj[key] = value;
+    });
+    return paramsObj;
+  };
+
+  useEffect(() => {
+    const params = getUrlParams();
+    // You can also handle default query if needed
+    setQuery(params?.keyword || "");
+  }, []);
+
   const handleSearch = async () => {
     setLoading(true);
     setSearched(true);
     setAds([]);
-    setNextArgs(null); // Reset NextArgs on a new search
-    try {
-      const encodedString = encodeURIComponent(query);
-      const response = await fetch(
-        `/api/proxy?Keywords=${encodedString}&mkt=us&siteLink=1&type=bl02fns`,
-        {
-          method: "POST",
-          body: JSON.stringify({ keyword: query }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    setNextArgs(null);
 
-      // Get the XML response as text
+    try {
+      const params = getUrlParams();
+      const encodedString = encodeURIComponent(query);
+
+      // Add affiliate to the URL parameters and include the query keyword
+      const url = `/api/proxy?${new URLSearchParams({
+        ...params, // Include all URL parameters
+        Keywords: encodedString,
+        affiliate: "adsuser2000129", // Keep this parameter hardcoded
+      }).toString()}`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: JSON.stringify({ keyword: query }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
       const xmlData = await response.text();
-      // Convert XML to JSON using parseStringPromise
       const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
 
-      // Extract listings from the JSON data
       setAds(extractListings(jsonData));
 
-      // Check if NextArgs exists and set it
       if (jsonData.Results?.NextArgs?.[0]) {
-        setNextArgs(jsonData.Results.NextArgs[0]); // Set NextArgs if it exists
+        setNextArgs(jsonData.Results.NextArgs[0]);
       }
     } catch (error) {
       console.error("Error fetching ads:", error);
@@ -43,31 +63,34 @@ export default function Home() {
       setLoading(false);
     }
   };
-  console.log(ads);
 
   const fetchNextResults = async () => {
     if (!nextArgs) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/proxy?${nextArgs}`, {
+      const params = getUrlParams();
+      const url = `/api/proxy?${new URLSearchParams({
+        ...params,
+        affiliate: "adsuser2000129", // Keep this parameter hardcoded
+      }).toString()}&${nextArgs}`;
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
 
-      // Get the XML response as text
       const xmlData = await response.text();
-      // Convert XML to JSON using parseStringPromise
       const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
-      // Append the new listings to the previous ones
+
       setAds((prevAds) => [...prevAds, ...extractListings(jsonData)]);
-      // Update NextArgs or set to null if none
+
       if (jsonData.Results?.NextArgs?.[0]) {
         setNextArgs(jsonData.Results.NextArgs[0]);
       } else {
-        setNextArgs(null); // Clear NextArgs if no further results
+        setNextArgs(null);
       }
     } catch (error) {
       console.error("Error fetching next results:", error);
