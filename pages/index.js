@@ -1,64 +1,84 @@
 import React, { useState, useEffect } from "react";
 import { parseStringPromise } from "xml2js";
+import { useRouter } from "next/router";
 
 export default function Home() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [nextArgs, setNextArgs] = useState(null);
+  const [error, setError] = useState("");
 
-  // Function to extract query parameters from URL
-  const getUrlParams = () => {
-    const params = new URLSearchParams(window.location.search);
-    const paramsObj = {};
-    params.forEach((value, key) => {
-      paramsObj[key] = value;
-    });
-    return paramsObj;
+  const requiredParams = {
+    mkt: "us",
+    siteLink: "1",
+    type: "bl02fns",
+    affiliate: "adsuser2000129",
   };
 
+  // Ensure required parameters exist in URL without modifying existing ones
   useEffect(() => {
-    const params = getUrlParams();
-    // You can also handle default query if needed
-    setQuery(params?.keyword || "");
-  }, []);
+    if (router.isReady) {
+      const params = new URLSearchParams(window.location.search);
+      let shouldUpdate = false;
 
+      // Ensure query parameter is in sync
+      if (params.has("Keywords")) {
+        setQuery(params.get("Keywords") || "");
+      }
+
+      // Add missing required parameters
+      Object.entries(requiredParams).forEach(([key, value]) => {
+        if (!params.has(key)) {
+          params.set(key, value);
+          shouldUpdate = true;
+        }
+      });
+
+      // If updates are required, update the URL without triggering an API call
+      if (shouldUpdate) {
+        router.replace(`?${params.toString()}`, undefined, { shallow: true });
+      }
+    }
+  }, [router.query, router.isReady]);
+
+  // API Call on Search Button Click
   const handleSearch = async () => {
+    if (!query.trim()) return;
+
     setLoading(true);
     setSearched(true);
     setAds([]);
     setNextArgs(null);
+    setError("");
+
+    // Construct URL with existing parameters and update only keyword
+    const params = new URLSearchParams(window.location.search);
+    params.set("Keywords", query);
+
+    router.push(`?${params.toString()}`, undefined, { shallow: true });
 
     try {
-      const params = getUrlParams();
-      const encodedString = encodeURIComponent(query);
-
-      // Add affiliate to the URL parameters and include the query keyword
-      const url = `/api/proxy?${new URLSearchParams({
-        ...params, // Include all URL parameters
-        Keywords: encodedString,
-        affiliate: "adsuser2000129", // Keep this parameter hardcoded
-      }).toString()}`;
+      const url = `/api/proxy?${params.toString()}`;
 
       const response = await fetch(url, {
         method: "POST",
-        body: JSON.stringify({ keyword: query }),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        body: JSON.stringify({ Keywords: query }),
+        headers: { "Content-Type": "application/json" },
       });
+
+      if (!response.ok) throw new Error("Failed to fetch ads");
 
       const xmlData = await response.text();
       const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
 
       setAds(extractListings(jsonData));
-
-      if (jsonData.Results?.NextArgs?.[0]) {
-        setNextArgs(jsonData.Results.NextArgs[0]);
-      }
+      setNextArgs(jsonData.Results?.NextArgs?.[0] || null);
     } catch (error) {
       console.error("Error fetching ads:", error);
+      setError("Failed to fetch ads. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,49 +88,39 @@ export default function Home() {
     if (!nextArgs) return;
 
     setLoading(true);
+    setError("");
+
     try {
-      const params = getUrlParams();
-      const url = `/api/proxy?${new URLSearchParams({
-        ...params,
-        affiliate: "adsuser2000129", // Keep this parameter hardcoded
-      }).toString()}&${nextArgs}`;
+      const params = new URLSearchParams(window.location.search);
+      const url = `/api/proxy?${params.toString()}&${nextArgs}`;
 
       const response = await fetch(url, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
+
+      if (!response.ok) throw new Error("Failed to fetch more results");
 
       const xmlData = await response.text();
       const jsonData = await parseStringPromise(xmlData, { mergeAttrs: true });
 
       setAds((prevAds) => [...prevAds, ...extractListings(jsonData)]);
-
-      if (jsonData.Results?.NextArgs?.[0]) {
-        setNextArgs(jsonData.Results.NextArgs[0]);
-      } else {
-        setNextArgs(null);
-      }
+      setNextArgs(jsonData.Results?.NextArgs?.[0] || null);
     } catch (error) {
       console.error("Error fetching next results:", error);
+      setError("Failed to load more results.");
     } finally {
       setLoading(false);
     }
   };
 
   function extractListings(data) {
-    const listings = [];
-    if (data.Results && Array.isArray(data.Results.ResultSet)) {
-      data.Results.ResultSet.forEach((resultSet) => {
-        if (Array.isArray(resultSet.Listing)) {
-          listings.push(...resultSet.Listing);
-        }
-      });
-    }
-    return listings;
+    return (
+      data?.Results?.ResultSet?.flatMap(
+        (resultSet) => resultSet.Listing || []
+      ) || []
+    );
   }
-
   return (
     <div
       className="min-h-screen bg-gray-100 p-4 flex flex-col items-center"
@@ -118,42 +128,48 @@ export default function Home() {
     >
       <div className="max-w-3xl w-full">
         <div>
-          <img src="/logo.png" className="logo" alt="Logo" />
+          <img src="/logo2.png" className="logo" alt="Logo" />
         </div>
-        {/* Search Bar */}
+
         <div className="flex items-center gap-2 mb-6">
           <input
             type="text"
-            className="flex-grow p-2 border 0 rounded-lg searchField"
+            className="flex-grow p-2 border rounded-lg searchField"
             placeholder="Type here to search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
             className={`px-4 py-2 text-white rounded-lg primaryButton ${
-              query.trim() === "" || loading
+              !query.trim() || loading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600"
             }`}
             onClick={handleSearch}
-            disabled={query.trim() === "" || loading}
+            disabled={!query.trim() || loading}
           >
             {loading ? "Searching..." : "Search"}
           </button>
         </div>
-        {/* Loader */}
+
+        {error && (
+          <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
         {loading && (
           <div className="flex justify-center items-center my-4">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div>
           </div>
         )}
-        {/* Ads Listing */}
+
         <div className="space-y-4">
           {ads.length > 0 ? (
             ads.map((ad, index) => (
               <div key={index} className="p-4 bg-white shadow rounded-lg">
                 <h2 className="text-[25px] font-semibold mb-3">
-                  {ad?.title[0] || "-- --"}
+                  {ad?.title?.[0] || "-- --"}
                 </h2>
                 <p className="text-sm text-gray-600">
                   {ad?.description?.[0] || "-- --"}
@@ -165,40 +181,37 @@ export default function Home() {
                   href={`https://${ad?.siteHost?.[0] || "#"}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ background: "#004aad" }}
                   className="inline-block mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
                   Learn More
                 </a>
               </div>
             ))
-          ) : !loading && !searched ? (
+          ) : !loading && searched ? (
+            <div className="p-4 bg-white shadow rounded-lg text-center">
+              <h2 className="text-lg font-bold text-gray-800 mb-2">
+                No Results Found
+              </h2>
+              <p className="text-sm text-gray-600">
+                Try searching for something else or refine your query.
+              </p>
+            </div>
+          ) : (
             <div className="p-4 bg-white shadow rounded-lg text-center">
               <h2 className="text-lg font-bold text-gray-800 mb-2">
                 Enter a search to see results
               </h2>
               <p className="text-sm text-gray-600">
-                Type a keyword and click search to get results.
+                Type a keyword and click search.
               </p>
             </div>
-          ) : (
-            !loading && (
-              <div className="p-4 bg-white shadow rounded-lg text-center">
-                <h2 className="text-lg font-bold text-gray-800 mb-2">
-                  No Results Found
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Try searching for something else or refine your search query.
-                </p>
-              </div>
-            )
           )}
         </div>
-        {/* Load More Button */}
+
         {nextArgs && (
           <div className="flex justify-center mt-6">
             <button
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 primaryButton"
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               onClick={fetchNextResults}
               disabled={loading}
             >

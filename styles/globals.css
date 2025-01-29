@@ -1,29 +1,26 @@
 @import "tailwindcss";
 
-body{
-  background-color:red;
+body {
+  background-color: red;
 }
 
-
-.logo{
-  width: 600px;
-    margin: auto;
-    margin-bottom: 50px;
-    margin-top: 50px;
+.logo {
+  width: 500px;
+  margin: auto;
+  margin-bottom: 50px;
+  margin-top: 50px;
 }
 
-.searchField{
+.searchField {
   background: white;
   border-color: black;
   height: 54px;
   font-size: 24px;
 }
 
-.primaryButton{
+.primaryButton {
   height: 53px;
   font-size: 20px;
   background: #004aad;
   width: 150px;
 }
-
-
