@@ -219,6 +219,9 @@ export default function Home() {
             </button>
           </div>
         )}
+        {query && ads.length > 0 && (
+          <div className="lastPati">Sponsored results for {query}</div>
+        )}
       </div>
     </div>
   );

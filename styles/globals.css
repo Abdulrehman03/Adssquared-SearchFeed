@@ -24,3 +24,11 @@ body {
   background: #004aad;
   width: 150px;
 }
+
+.lastPati {
+  margin-top: 100px;
+  padding: 7px;
+  background: #47525d42;
+  color: black;
+  border-radius: 8px;
+}
