@@ -131,16 +131,16 @@ export default function Home() {
           <img src="/logo2.png" className="logo" alt="Logo" />
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-6 w-full">
           <input
             type="text"
-            className="flex-grow p-2 border rounded-lg searchField"
+            className="w-full p-3 border border-black rounded-lg bg-white text-xl sm:text-2xl h-[54px] searchField"
             placeholder="Type here to search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
-            className={`px-4 py-2 text-white rounded-lg primaryButton ${
+            className={`w-full sm:w-[150px] px-4 py-2 text-white rounded-lg text-lg sm:text-xl primaryButton ${
               !query.trim() || loading
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600"
