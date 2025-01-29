@@ -2,7 +2,7 @@ export const runtime = "edge";
 
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
-  const apiUrl = `http://searchfeed.adssquared.com/search?affiliate=adsuser2000129&${searchParams}`;
+  const apiUrl = `http://searchfeed.adssquared.com/search?${searchParams}`;
 
   try {
     // Fetch XML data from the API
